@@ -1,18 +1,62 @@
-d1={'t1':'watering plants','t2':'sun bath'}
-print("welcome to planner\n")
-for i in range(1,100):
-    y=input("what do you want to do : \n1.know about my tasks\n2.add a task\n3.mark task completed\n4.update task\n\n : ")
-    if (y=='1'):
-        x=input("enter task to be known:")
-        if x in d1.keys():
-            print(f"your task {x} is : {d1.get(x)}")
-        else:
-            a=input(f"there is no {x} task in your planner, to know available tasks in planner input \"yes\" else input \"no\" to go back to main menu : ")
-            if a=='yes':
-                print("available tasks in your planner are : \n")
-                print(i for i in d1.keys())
+# Task planner dictionary
+d1 = {
+    't1': 'watering plants',
+    't2': 'sun bath'
+}
 
-    elif (y=='2'):
-        x=input("enter the new task:")
-        d1.update({'t3':x})
-        print(d1.items())
+print("Welcome to the Planner!\n")
+
+for _ in range(1, 100):
+    print("\nWhat do you want to do?")
+    print("1. Know about a task")
+    print("2. Add a task")
+    print("3. Mark task as completed")
+    print("4. Update a task")
+    print("5. Exit")
+
+    choice = input("Enter your choice (1-5): ").strip()
+
+    if choice == '1':
+        task_id = input("Enter task ID to check (e.g., t1, t2): ").strip()
+        if task_id in d1:
+            print(f"Your task {task_id} is: {d1[task_id]}")
+        else:
+            ask = input(f"No task '{task_id}' found. Do you want to see available tasks? (yes/no): ").strip().lower()
+            if ask == 'yes':
+                print("\nAvailable tasks in your planner:")
+                for k in d1:
+                    print(f"{k}: {d1[k]}")
+
+    elif choice == '2':
+        new_task = input("Enter the new task description: ").strip()
+        new_id = f"t{len(d1) + 1}"
+        d1[new_id] = new_task
+        print(f"\nTask added as {new_id}: {new_task}")
+        print("All tasks:")
+        for k, v in d1.items():
+            print(f"{k}: {v}")
+
+    elif choice == '3':
+        task_id = input("Enter task ID to mark as completed: ").strip()
+        if task_id in d1:
+            print(f"Task '{d1[task_id]}' marked as completed and removed.")
+            del d1[task_id]
+        else:
+            print("Invalid task ID.")
+
+    elif choice == '4':
+        task_id = input("Enter task ID to update: ").strip()
+        if task_id in d1:
+            new_task = input("Enter updated task description: ").strip()
+            d1[task_id] = new_task
+            print(f"Task {task_id} updated to: {new_task}")
+        else:
+            print("Invalid task ID.")
+
+    elif choice == '5':
+        print("Exiting planner. Have a nice day!")
+        break
+
+    else:
+        print("Invalid option! Please choose from 1 to 5.")
+
