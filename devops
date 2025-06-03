@@ -1,0 +1,176 @@
+Lab Setup:
+Step 1: Install WSL on Windows :
+ Install Windows Subsystem for Linux (WSL) to provide a Linux environment on a 
+Windows system.
+ Open PowerShell as Administrator.
+ Run the command:
+ wsl - - install
+Step 2: Install Ubuntu on WSL
+ 1. Open Microsoft Store
+ 2. Search for "Ubuntu App" (choose Ubuntu 22.04 LTS)
+ 3. Click Install
+ 4. After installation, open Ubuntu from Start Menu
+ 5. It will ask to create a UNIX username and password
+Step 3: Update Ubuntu Packages
+ 
+ Run the following command: sudo apt update -y
+Step 4: Install Ansible inside WSL (Ubuntu)
+ 
+ Run the command : sudo apt install ansible -y
+ Verify the installation by checking the Ansible version : ansible - -version
+Lab Execution : Configuration Management with Ansible
+ Step 5: Create a Working Directory
+ 
+ Run the following commands to create and navigate into the directory:
+ mkdir ansible-lab
+ cd ansible-lab6: Create the Inventory File
+ Create a file that lists the target hosts for Ansible (in this case, the localhost).
+ Use vi or any text editor to create the inventory.ini file:
+ vi inventory.ini
+ Add the following content to the file:
+ [local]
+ localhost ansible_connection=local
+ Save and exit by pressing Esc, typing :wq, and pressing Enter.
+Step 7: Test Connectivity with Ansible
+ Ensure that Ansible can communicate with the localhost.
+ Run the following Ad-hoc command to test connectivity 
+ ansible all -i inventory.ini -m ping
+ Expected Output:
+ 
+ localhost | SUCCESS => {
+ "changed": false,
+ "ping": "pong"
+ }
+ This confirms that Ansible can communicate with the localhost.
+Step 8: Create a Basic Playbook
+ Write a playbook to automate the installation of the htop package.
+ Create a playbook install_htop.yml:
+ vi install_htop.yml
+ Add the following content:
+ 
+ ---
+- name: Install htop system monitor tool
+ hosts: local
+ become: true
+ 
+ tasks:
+ - name: Install htop package
+ ansible.builtin.package:
+ name: htop
+ state: present
+ Save and exit by pressing Esc, typing :wq, and pressing Enter.Step 9: Run the Playbook 
+ Run the playbook to execute the automated tasks.
+ Run the playbook with the following command:
+ansible-playbook -i inventory.ini install_htop.yml
+ Expected Output:
+TASK [Ensure htop is installed] *****************************************
+changed: [localhost]
+Step 10: Verify the Installation 
+ Verify that the htop package is installed correctly.
+ Type the command 
+ htop
+ This should open the interactive htop system monitor (press q to exit it).
+
+
+PART A: Jenkins CI Setup for Maven Project
+Step 1. Create a Maven Project 
+ Use mvn archetype:generate or create using IDE (like IntelliJ/Eclipse).
+ Ensure it contains pom.xml and source code.
+ Test locally: mvn compile test package
+Step 2. Push Project to GitHub:
+ Initialize Git, add remote, commit and push:
+ 
+ git init
+ git add .
+ git commit -m "Initial commit"
+ git branch -M main
+ git remote add origin <GitHub_Repo_URL>
+ git push -u origin main 
+Step 3. Install and Configure Jenkins:
+ Start Jenkins and install required plugins: Maven Integration, Git, Ansible.
+ Configure Maven and JDK paths in Manage Jenkins > Global Tool Configuration.
+Step 4. Set Up Jenkins CI Job
+ Open Jenkins → New Item → Select "Freestyle project".
+ Under Source Code Management, choose Git and paste your GitHub repo URL.
+ Under Build Triggers, enable Poll SCM (e.g., H/5 * * * *).
+ Under Build section: 
+ Select "Invoke top-level Maven targets"
+ Goal: clean compile test package
+ Add a Windows Batch Command to test run the jar:
+ java -cp target/your-app-1.0-SNAPSHOT.jar com.multit.AppSave and Build the job — confirm that .jar is generated in target/.
+Archive the Artifact:
+ Post-build action: Select Archive the artifacts, and give:
+ target/*.jar 
+PART B: Set Up Ansible (CD) for deploying the artifact ie .JAR file generated 
+by Jenkins 
+Step 1. Install Ansible in WSL (Ubuntu):
+ sudo apt update –y 
+ sudo apt install ansible –y
+Step 2. Configure Ansible Inventory and Playbook to deploy the JAR file.
+ mkdir ansible-lab
+ cd ansible-lab
+ vi inventory.ini 
+ Add the following into the Inventory file 
+ [local]
+ localhost ansible_connection=local
+ Create the deploy.yml playbook:
+ ---
+ - name: Deploy JAR
+ hosts: local
+ become: true
+ 
+ tasks:
+ - name: Copy JAR file
+ copy:
+ src: /mnt/c/ProgramData/Jenkins/.jenkins/workspace/your-job/target/your-app.jar
+ dest: /home/your-username/ansible-lab/app.jar
+ mode: '0755'
+ 
+ - name: Run JAR file
+ shell: nohup java -jar /home/your-username/ansible-lab/app.jar > app.log 2>&1 &
+Step 3. Run the Playbook manually in WSL to verify the deployment:
+ ansible-playbook -i inventory.ini deploy.ymlStep 4: Automate the Deployment in Jenkins (optional)
+1. Go back to the Jenkins job configuration and add a post-build action.
+2. Add a Windows Batch Command to run the Ansible playbook automatically:
+wsl ansible-playbook -i /home/your-user/ansible-lab/inventory /home/youruser/ansible-
+lab/deploy.yml
+Trigger the Jenkins Build: When Jenkins builds the Maven project, it will automatically 
+trigger the deployment using Ansible.
+Step 5: Verify the Application Runs
+ Check the deployment logs on your target machine to ensure the JAR file was deployed 
+successfully.
+ Using this command : cat app.log
+Step 6: Encounter the Manifest Error
+ During Deployment, if you try to run the JAR and see the following error:
+ no main manifest attribute, in your-app-1.0-SNAPSHOT.jar
+ This error occurs because the Main-Class is missing from the META-INF/MANIFEST.MF file inside 
+the JARStep 7: Resolve the Manifest Error
+ Fix the Manifest Error by Updating pom.xml
+ Edit pom.xml in the root directory of your Maven project to add the maven-jar-
+plugin configuration under the <build> section:
+ <build>
+ <plugins>
+ <plugin>
+ <artifactId>maven-jar-plugin</artifactId>
+ <version>3.1.0</version>
+ <configuration>
+ <archive>
+ <manifest>
+ <addClasspath>true</addClasspath>
+ <mainClass>com.multit.App</mainClass> <!-- Replace with main class 
+ </manifest>
+ </archive>
+ </configuration>
+ </plugin>
+ </plugins>
+ </build>
+Step 8: Redeploy the Artifact
+ Push Changes to GitHub:
+ git add pom.xml
+ git commit -m "Fix manifest error by adding Main-Class"
+ git push -u origin main
+Jenkins will automatically trigger the build and deploy the new JAR file, which now includes the 
+correct Main-Class.
+Step 9: Rerun Application 
+ Using this command : cat app.log 
+ now the application running without the manifest error.
