@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Note Taking App with Pinning (Mobile Optimized)</title>
+  <style>
+    /* Basic styling */
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+    h1 { text-align: center; }
+    .note-form, .notes { margin: 20px auto; max-width: 500px; }
+    input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
+    .note { background: #fff; padding: 15px; margin: 10px 0; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    img { max-width: 100%; border-radius: 10px; margin-top: 10px; }
+    .btn-pin { background: #007bff; color: white; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+  <h1>Note Taking App 📒</h1>
+
+  <!-- Form for creating new note -->
+  <div class="note-form">
+    <textarea id="noteText" placeholder="Enter your note..."></textarea>
+    <input type="file" id="noteImage">
+    <button id="saveBtn">Save Note</button>
+  </div>
+
+  <!-- Where notes will be displayed -->
+  <div class="notes" id="notesList"></div>
+
+  <script>
+    const saveBtn = document.getElementById('saveBtn');
+    const notesList = document.getElementById('notesList');
+
+    // Load notes from localStorage when page loads
+    window.onload = () => {
+      const notes = JSON.parse(localStorage.getItem('notes')) || [];
+      notes.forEach(note => renderNote(note));
+    }
+
+    // When user clicks Save button
+    saveBtn.onclick = () => {
+      const text = document.getElementById('noteText').value;
+      const file = document.getElementById('noteImage').files[0];
+
+      if (!text && !file) {
+        alert("Please enter a note or select an image");
+        return;
+      }
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const imageData = reader.result;  // base64 encoded image
+          saveNote({ text, image: imageData });
+        }
+        reader.readAsDataURL(file);
+      } else {
+        saveNote({ text, image: null });
+      }
+    }
+
+    // Save the note to localStorage
+    function saveNote(note) {
+      const notes = JSON.parse(localStorage.getItem('notes')) || [];
+      notes.push(note);
+      localStorage.setItem('notes', JSON.stringify(notes));
+      renderNote(note);
+      clearForm();
+    }
+
+    // Render the note on the page
+    function renderNote(note) {
+      const noteDiv = document.createElement('div');
+      noteDiv.className = 'note';
+      noteDiv.innerHTML = `
+        <p>${note.text}</p>
+        ${note.image ? `<img src="${note.image}">` : ""}
+        <button class="btn-pin">Pin Note</button>
+      `;
+      noteDiv.querySelector('.btn-pin').onclick = () => sendNotification(note);
+      notesList.prepend(noteDiv);
+    }
+
+    // Clear form fields after saving note
+    function clearForm() {
+      document.getElementById('noteText').value = "";
+      document.getElementById('noteImage').value = "";
+    }
+
+    // Handle sending notification
+    function sendNotification(note) {
+      if (!("Notification" in window)) {
+        alert("Your browser does not support notifications");
+        return;
+      }
+
+      if (Notification.permission === "granted") {
+        showNotification(note);
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            showNotification(note);
+          }
+        });
+      }
+    }
+
+    // Show the actual notification
+    function showNotification(note) {
+      const options = {
+        body: note.text ? note.text : "Pinned Note", // fallback if text is empty
+        tag: "note-" + Date.now(), // unique tag for each notification
+        renotify: false // prevent duplicate stacking
+      };
+
+      // Only attach image if available
+      if (note.image) {
+        options.image = note.image;
+        options.icon = note.image;
+      }
+
+      const notification = new Notification("📌 Pinned Note", options);
+
+      // Focus app if notification clicked
+      notification.onclick = () => {
+        if (document.hasFocus() === false) {
+          window.focus();
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>
