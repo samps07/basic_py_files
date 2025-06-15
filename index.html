@@ -1,135 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Note Taking App with Pinning (Mobile Optimized)</title>
-  <style>
-    /* Basic styling */
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
-    h1 { text-align: center; }
-    .note-form, .notes { margin: 20px auto; max-width: 500px; }
-    input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: 1px solid #ccc; }
-    .note { background: #fff; padding: 15px; margin: 10px 0; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    img { max-width: 100%; border-radius: 10px; margin-top: 10px; }
-    .btn-pin { background: #007bff; color: white; cursor: pointer; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Note Taking App 📒</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f2f2f2; }
+        h1 { text-align: center; }
+        .note-form, .notes { margin: 20px auto; width: 90%; max-width: 500px; }
+        input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; }
+        .note { background: #fff; padding: 10px; margin: 10px 0; border-radius: 5px; position: relative; }
+        img { max-width: 100%; height: auto; }
+        .btn-pin { position: absolute; top: 10px; right: 10px; background: orange; color: white; border: none; padding: 5px; border-radius: 3px; }
+    </style>
 </head>
 <body>
+    <h1>Note Taking App 📒</h1>
 
-  <h1>Note Taking App 📒</h1>
+    <div class="note-form">
+        <input type="text" id="noteTitle" placeholder="Title (optional)">
+        <textarea id="noteText" placeholder="Write your note here..."></textarea>
+        <input type="file" id="noteImage">
+        <button onclick="addNote()">Add Note</button>
+    </div>
 
-  <!-- Form for creating new note -->
-  <div class="note-form">
-    <textarea id="noteText" placeholder="Enter your note..."></textarea>
-    <input type="file" id="noteImage">
-    <button id="saveBtn">Save Note</button>
-  </div>
+    <div class="notes" id="notesContainer"></div>
 
-  <!-- Where notes will be displayed -->
-  <div class="notes" id="notesList"></div>
-
-  <script>
-    const saveBtn = document.getElementById('saveBtn');
-    const notesList = document.getElementById('notesList');
-
-    // Load notes from localStorage when page loads
-    window.onload = () => {
-      const notes = JSON.parse(localStorage.getItem('notes')) || [];
-      notes.forEach(note => renderNote(note));
-    }
-
-    // When user clicks Save button
-    saveBtn.onclick = () => {
-      const text = document.getElementById('noteText').value;
-      const file = document.getElementById('noteImage').files[0];
-
-      if (!text && !file) {
-        alert("Please enter a note or select an image");
-        return;
-      }
-
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const imageData = reader.result;  // base64 encoded image
-          saveNote({ text, image: imageData });
+    <script>
+        // Request Notification permission on page load
+        if ('Notification' in window && Notification.permission !== 'granted') {
+            Notification.requestPermission();
         }
-        reader.readAsDataURL(file);
-      } else {
-        saveNote({ text, image: null });
-      }
-    }
 
-    // Save the note to localStorage
-    function saveNote(note) {
-      const notes = JSON.parse(localStorage.getItem('notes')) || [];
-      notes.push(note);
-      localStorage.setItem('notes', JSON.stringify(notes));
-      renderNote(note);
-      clearForm();
-    }
-
-    // Render the note on the page
-    function renderNote(note) {
-      const noteDiv = document.createElement('div');
-      noteDiv.className = 'note';
-      noteDiv.innerHTML = `
-        <p>${note.text}</p>
-        ${note.image ? `<img src="${note.image}">` : ""}
-        <button class="btn-pin">Pin Note</button>
-      `;
-      noteDiv.querySelector('.btn-pin').onclick = () => sendNotification(note);
-      notesList.prepend(noteDiv);
-    }
-
-    // Clear form fields after saving note
-    function clearForm() {
-      document.getElementById('noteText').value = "";
-      document.getElementById('noteImage').value = "";
-    }
-
-    // Handle sending notification
-    function sendNotification(note) {
-      if (!("Notification" in window)) {
-        alert("Your browser does not support notifications");
-        return;
-      }
-
-      if (Notification.permission === "granted") {
-        showNotification(note);
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
-          if (permission === "granted") {
-            showNotification(note);
-          }
-        });
-      }
-    }
-
-    // Show the actual notification
-    function showNotification(note) {
-      const options = {
-        body: note.text ? note.text : "Pinned Note", // fallback if text is empty
-        tag: "note-" + Date.now(), // unique tag for each notification
-        renotify: false // prevent duplicate stacking
-      };
-
-      // Only attach image if available
-      if (note.image) {
-        options.image = note.image;
-        options.icon = note.image;
-      }
-
-      const notification = new Notification("📌 Pinned Note", options);
-
-      // Focus app if notification clicked
-      notification.onclick = () => {
-        if (document.hasFocus() === false) {
-          window.focus();
+        // Service Worker registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+            .then(() => console.log('Service Worker Registered'));
         }
-      }
-    }
-  </script>
 
+        function addNote() {
+            const text = document.getElementById('noteText').value;
+            const title = document.getElementById('noteTitle').value;
+            const fileInput = document.getElementById('noteImage');
+            const file = fileInput.files[0];
+
+            const note = document.createElement('div');
+            note.className = 'note';
+
+            const titleElem = document.createElement('h3');
+            titleElem.textContent = title || "Untitled Note";
+            note.appendChild(titleElem);
+
+            const textElem = document.createElement('p');
+            textElem.textContent = text;
+            note.appendChild(textElem);
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    note.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+
+            const pinBtn = document.createElement('button');
+            pinBtn.textContent = "📌 Pin";
+            pinBtn.className = 'btn-pin';
+            pinBtn.onclick = () => pinNote(title || "Pinned Note", text);
+            note.appendChild(pinBtn);
+
+            document.getElementById('notesContainer').appendChild(note);
+
+            // Reset form
+            document.getElementById('noteText').value = '';
+            document.getElementById('noteTitle').value = '';
+            fileInput.value = '';
+        }
+
+        function pinNote(title, text) {
+            if ('Notification' in window && Notification.permission === 'granted') {
+                navigator.serviceWorker.getRegistration().then(function(reg) {
+                    if (reg) {
+                        reg.showNotification(title, {
+                            body: text,
+                            icon: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png"
+                        });
+                    }
+                });
+            }
+        }
+    </script>
 </body>
 </html>
