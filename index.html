@@ -27,14 +27,14 @@
     <div class="note-form">
         <input type="text" id="noteTitle" placeholder="Title (optional)">
         <textarea id="noteText" placeholder="Write your note here..."></textarea>
-        <input type="file" id="noteImage">
+        <input type="text" id="imageUrl" placeholder="Image URL (optional)">
         <button onclick="addNote()">Add Note</button>
     </div>
 
     <div class="notes" id="notesContainer"></div>
 
     <script>
-        // Ask for Notification permission on page load
+        // Request Notification permission
         if ('Notification' in window && Notification.permission !== 'granted') {
             Notification.requestPermission();
         }
@@ -49,8 +49,7 @@
         function addNote() {
             const text = document.getElementById('noteText').value;
             const title = document.getElementById('noteTitle').value;
-            const fileInput = document.getElementById('noteImage');
-            const file = fileInput.files[0];
+            const imageUrl = document.getElementById('imageUrl').value;
 
             const note = document.createElement('div');
             note.className = 'note';
@@ -63,20 +62,16 @@
             textElem.textContent = text;
             note.appendChild(textElem);
 
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    note.appendChild(img);
-                };
-                reader.readAsDataURL(file);
+            if (imageUrl) {
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                note.appendChild(img);
             }
 
             const pinBtn = document.createElement('button');
             pinBtn.textContent = "📌 Pin";
             pinBtn.className = 'btn-pin';
-            pinBtn.onclick = () => pinNote(title || "Pinned Note", text);
+            pinBtn.onclick = () => pinNote(title || "Pinned Note", text, imageUrl);
             note.appendChild(pinBtn);
 
             document.getElementById('notesContainer').appendChild(note);
@@ -84,23 +79,20 @@
             // Reset form
             document.getElementById('noteText').value = '';
             document.getElementById('noteTitle').value = '';
-            fileInput.value = '';
+            document.getElementById('imageUrl').value = '';
         }
 
-        function pinNote(title, text) {
+        function pinNote(title, text, imageUrl) {
             if ('Notification' in window && Notification.permission === 'granted') {
                 navigator.serviceWorker.getRegistration().then(function(reg) {
                     if (reg) {
                         reg.showNotification(title, {
                             body: text,
-                            icon: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png"
+                            icon: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
+                            image: imageUrl || undefined
                         });
-                    } else {
-                        console.error('Service Worker registration not found');
                     }
                 }).catch(err => console.error('Error fetching service worker registration', err));
-            } else {
-                console.log('Notification permission not granted');
             }
         }
     </script>
