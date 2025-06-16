@@ -1,100 +1,121 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Note Taking App 📒</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f2f2f2; }
-        h1 { text-align: center; }
-        .note-form, .notes { margin: 20px auto; width: 90%; max-width: 500px; }
-        input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; }
-        .note { background: #fff; padding: 10px; margin: 10px 0; border-radius: 5px; position: relative; }
-        img { max-width: 100%; height: auto; }
-        .btn-pin { 
-            float: right; 
-            background: orange; 
-            color: white; 
-            border: none; 
-            padding: 5px 10px; 
-            border-radius: 3px;
-            margin-top: -30px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Note Taking App 📒 (Supabase Powered)</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background-color: #f2f2f2; }
+    h1 { text-align: center; }
+    .note-form, .notes { margin: 20px auto; width: 90%; max-width: 500px; }
+    input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; }
+    .note { background: #fff; padding: 10px; margin: 10px 0; border-radius: 5px; position: relative; }
+    img { max-width: 100%; height: auto; }
+    .btn-pin { float: right; background: orange; color: white; border: none; padding: 5px 10px; border-radius: 3px; margin-top: -30px; }
+    .error { color: red; font-weight: bold; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 </head>
+
 <body>
-    <h1>Note Taking App 📒</h1>
+  <h1>Note Taking App 📒</h1>
 
-    <div class="note-form">
-        <input type="text" id="noteTitle" placeholder="Title (optional)">
-        <textarea id="noteText" placeholder="Write your note here..."></textarea>
-        <input type="text" id="imageUrl" placeholder="Image URL (optional)">
-        <button onclick="addNote()">Add Note</button>
-    </div>
+  <div class="note-form">
+    <input type="text" id="noteTitle" placeholder="Title (optional)">
+    <textarea id="noteText" placeholder="Write your note here..."></textarea>
+    <input type="file" id="imageFile">
+    <div id="errorMessage" class="error"></div>
+    <button onclick="addNote()">Add Note</button>
+  </div>
 
-    <div class="notes" id="notesContainer"></div>
+  <div class="notes" id="notesContainer"></div>
 
-    <script>
-        // Request Notification permission
-        if ('Notification' in window && Notification.permission !== 'granted') {
-            Notification.requestPermission();
+  <script>
+    // Replace with your actual Supabase values 👇
+    const SUPABASE_URL = 'https://zblhjflsqlcsohwktoji.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpibGhqZmxzcWxjc29od2t0b2ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwODA1NTIsImV4cCI6MjA2NTY1NjU1Mn0.9vJ2oFQekUlpLoL1N4IFiFyT9hb7e1ph1bvmuwJYnKk';
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Request Notification permission
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      Notification.requestPermission();
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js', {scope: './'});
+    }
+
+    async function uploadImage(file) {
+      const filename = Date.now() + "_" + file.name;
+      const { data, error } = await supabase.storage.from('notes').upload(filename, file, { upsert: true });
+      if (error) throw error;
+
+      const { publicURL } = supabase.storage.from('notes').getPublicUrl(filename).data;
+      return publicURL;
+    }
+
+    async function addNote() {
+      const title = document.getElementById('noteTitle').value;
+      const text = document.getElementById('noteText').value;
+      const fileInput = document.getElementById('imageFile');
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = '';
+
+      let imageUrl = '';
+
+      if (fileInput.files.length > 0) {
+        try {
+          imageUrl = await uploadImage(fileInput.files[0]);
+        } catch (err) {
+          errorDiv.textContent = "Image upload failed!";
+          return;
         }
+      }
 
-        // Register Service Worker correctly for GitHub Pages subfolder
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./service-worker.js', {scope: './'})
-            .then(() => console.log('Service Worker Registered'))
-            .catch(err => console.error('Service Worker registration failed', err));
-        }
+      const note = document.createElement('div');
+      note.className = 'note';
 
-        function addNote() {
-            const text = document.getElementById('noteText').value;
-            const title = document.getElementById('noteTitle').value;
-            const imageUrl = document.getElementById('imageUrl').value;
+      const titleElem = document.createElement('h3');
+      titleElem.textContent = title || "Untitled Note";
+      note.appendChild(titleElem);
 
-            const note = document.createElement('div');
-            note.className = 'note';
+      const textElem = document.createElement('p');
+      textElem.textContent = text;
+      note.appendChild(textElem);
 
-            const titleElem = document.createElement('h3');
-            titleElem.textContent = title || "Untitled Note";
-            note.appendChild(titleElem);
+      if (imageUrl) {
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        note.appendChild(img);
+      }
 
-            const textElem = document.createElement('p');
-            textElem.textContent = text;
-            note.appendChild(textElem);
+      const pinBtn = document.createElement('button');
+      pinBtn.textContent = "📌 Pin";
+      pinBtn.className = 'btn-pin';
+      pinBtn.onclick = () => pinNote(title || "Pinned Note", text, imageUrl);
+      note.appendChild(pinBtn);
 
-            if (imageUrl) {
-                const img = document.createElement('img');
-                img.src = imageUrl;
-                note.appendChild(img);
-            }
+      document.getElementById('notesContainer').appendChild(note);
 
-            const pinBtn = document.createElement('button');
-            pinBtn.textContent = "📌 Pin";
-            pinBtn.className = 'btn-pin';
-            pinBtn.onclick = () => pinNote(title || "Pinned Note", text, imageUrl);
-            note.appendChild(pinBtn);
+      // Reset form
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteText').value = '';
+      fileInput.value = '';
+    }
 
-            document.getElementById('notesContainer').appendChild(note);
-
-            // Reset form
-            document.getElementById('noteText').value = '';
-            document.getElementById('noteTitle').value = '';
-            document.getElementById('imageUrl').value = '';
-        }
-
-        function pinNote(title, text, imageUrl) {
-            if ('Notification' in window && Notification.permission === 'granted') {
-                navigator.serviceWorker.getRegistration().then(function(reg) {
-                    if (reg) {
-                        reg.showNotification(title, {
-                            body: text,
-                            icon: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
-                            image: imageUrl || undefined
-                        });
-                    }
-                }).catch(err => console.error('Error fetching service worker registration', err));
-            }
-        }
-    </script>
+    function pinNote(title, text, imageUrl) {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        navigator.serviceWorker.getRegistration().then(function(reg) {
+          if (reg) {
+            reg.showNotification(title, {
+              body: text,
+              icon: "https://cdn-icons-png.flaticon.com/512/1828/1828884.png",
+              image: imageUrl || undefined
+            });
+          }
+        });
+      }
+    }
+  </script>
 </body>
 </html>
