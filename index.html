@@ -22,7 +22,7 @@
   <div class="note-form">
     <input type="text" id="noteTitle" placeholder="Title (optional)">
     <textarea id="noteText" placeholder="Write your note here..."></textarea>
-    <input type="file" id="imageFile">
+    <input type="file" id="imageFile" accept="image/*" capture="environment">
     <div id="errorMessage" class="error"></div>
     <button onclick="addNote()">Add Note</button>
   </div>
@@ -30,23 +30,19 @@
   <div class="notes" id="notesContainer"></div>
 
   <script>
-    // Your actual Supabase credentials:
     const SUPABASE_URL = 'https://zblhjflsqlcsohwktoji.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpibGhqZmxzcWxjc29od2t0b2ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwODA1NTIsImV4cCI6MjA2NTY1NjU1Mn0.9vJ2oFQekUlpLoL1N4IFiFyT9hb7e1ph1bvmuwJYnKk';
 
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Request Notification permission
     if ('Notification' in window && Notification.permission !== 'granted') {
       Notification.requestPermission();
     }
 
-    // Register service worker for offline support
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js', {scope: './'});
     }
 
-    // Upload image to Supabase Storage
     async function uploadImage(file) {
       const filename = Date.now() + "_" + file.name;
       const { data, error } = await supabase.storage.from('notes').upload(filename, file, { upsert: true });
@@ -69,6 +65,7 @@
         try {
           imageUrl = await uploadImage(fileInput.files[0]);
         } catch (err) {
+          console.error(err);
           errorDiv.textContent = "Image upload failed!";
           return;
         }
@@ -105,7 +102,6 @@
       fileInput.value = '';
     }
 
-    // Push notification with image
     function pinNote(title, text, imageUrl) {
       if ('Notification' in window && Notification.permission === 'granted') {
         navigator.serviceWorker.getRegistration().then(function(reg) {
