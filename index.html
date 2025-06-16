@@ -30,7 +30,7 @@
   <div class="notes" id="notesContainer"></div>
 
   <script>
-    // Replace with your actual Supabase values 👇
+    // Your actual Supabase credentials:
     const SUPABASE_URL = 'https://zblhjflsqlcsohwktoji.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpibGhqZmxzcWxjc29od2t0b2ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwODA1NTIsImV4cCI6MjA2NTY1NjU1Mn0.9vJ2oFQekUlpLoL1N4IFiFyT9hb7e1ph1bvmuwJYnKk';
 
@@ -41,17 +41,19 @@
       Notification.requestPermission();
     }
 
+    // Register service worker for offline support
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./service-worker.js', {scope: './'});
     }
 
+    // Upload image to Supabase Storage
     async function uploadImage(file) {
       const filename = Date.now() + "_" + file.name;
       const { data, error } = await supabase.storage.from('notes').upload(filename, file, { upsert: true });
       if (error) throw error;
 
-      const { publicURL } = supabase.storage.from('notes').getPublicUrl(filename).data;
-      return publicURL;
+      const { data: publicData } = supabase.storage.from('notes').getPublicUrl(filename);
+      return publicData.publicUrl;
     }
 
     async function addNote() {
@@ -103,6 +105,7 @@
       fileInput.value = '';
     }
 
+    // Push notification with image
     function pinNote(title, text, imageUrl) {
       if ('Notification' in window && Notification.permission === 'granted') {
         navigator.serviceWorker.getRegistration().then(function(reg) {
